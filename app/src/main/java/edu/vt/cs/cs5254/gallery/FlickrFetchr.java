@@ -3,6 +3,7 @@ package edu.vt.cs.cs5254.gallery;
 import android.net.Uri;
 import android.util.Log;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -17,7 +18,7 @@ import java.util.List;
 public class FlickrFetchr {
 
     private static final String TAG = "FlickrFetchr";
-    private static final String API_KEY = "";
+    private static final String API_KEY = "59b41311fbcccd7521629930b8f86282";
 
     public byte[] getUrlBytes(String urlSpec) throws IOException {
         URL url = new URL(urlSpec);
@@ -69,5 +70,27 @@ public class FlickrFetchr {
         }
 
         return items;
+    }
+
+    private String getUrlString(String url) throws IOException {
+        return new String(getUrlBytes(url));
+    }
+
+    public void parseItems(List<GalleryItem> items, JSONObject jsonBody)
+        throws JSONException {
+        JSONObject photosJsonObject = jsonBody.getJSONObject("photos");
+        JSONArray photoJsonArray = photosJsonObject.getJSONArray("photo");
+
+        for (int i = 0; i < photoJsonArray.length(); i++) {
+            JSONObject photoJsonObject = photoJsonArray.getJSONObject(i);
+            GalleryItem item = new GalleryItem();
+            item.setId(photoJsonObject.getString("id"));
+            item.setCaption(photoJsonObject.getString("title"));
+            item.setUrl(photoJsonObject.getString("url_s"));
+            item.setLat(photoJsonObject.getDouble("latitude"));
+            item.setLon(photoJsonObject.getDouble("longitude"));
+            items.add(item);
+
+        }
     }
 }
