@@ -1,7 +1,11 @@
 package edu.vt.cs.cs5254.gallery;
 
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
@@ -20,6 +24,7 @@ public class PhotoMapFragment extends SupportMapFragment
     private static final String TAG = "PhotoMapFragment";
     private GoogleMap mMap;
     private GalleryItemLab mItemLab = GalleryItemLab.get();
+    ThumbnailDownloader<GalleryItem> mThumbnailDownloader;
 
     public static PhotoMapFragment newInstance() {
         return new PhotoMapFragment();
@@ -38,6 +43,18 @@ public class PhotoMapFragment extends SupportMapFragment
             mMap = googleMap;
             updateUI();
         });
+
+        Handler responseHandler = new Handler();
+        mThumbnailDownloader = new ThumbnailDownloader<>(responseHandler);
+        mThumbnailDownloader.setThumbnailDownloadListener(
+                (GalleryItem mGalleryItem, Bitmap bitmap) -> {
+                    Drawable drawable = new BitmapDrawable(getResources(), bitmap);
+                    mGalleryItem.setDrawable(drawable);
+                }
+        );
+        mThumbnailDownloader.start();
+        mThumbnailDownloader.getLooper();
+        Log.i(TAG, "Background thread started");
     }
 
     @Override
@@ -55,6 +72,9 @@ public class PhotoMapFragment extends SupportMapFragment
             MarkerOptions options = new MarkerOptions()
                     .position(itemLatLng)
                     .title(item.getCaption());
+            if (!item.hasDrawable()) {
+                mThumbnailDownloader.queueThumbnail(item, item.getUrl());
+            }
             mMap.setInfoWindowAdapter(new MarkerInfoWindow(getContext()));
             Marker marker = mMap.addMarker(options);
             marker.setTag(item);
