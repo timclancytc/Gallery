@@ -8,16 +8,18 @@ import android.util.Log;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class PhotoMapFragment extends SupportMapFragment {
+public class PhotoMapFragment extends SupportMapFragment
+        implements GalleryItemLab.OnRefreshItemsListener {
 
     private static final String TAG = "PhotoMapFragment";
-    private List<GalleryItem> mItems = new ArrayList<>();
     private GoogleMap mMap;
+    private GalleryItemLab mItemLab = GalleryItemLab.get();
 
     public static PhotoMapFragment newInstance() {
         return new PhotoMapFragment();
@@ -28,7 +30,9 @@ public class PhotoMapFragment extends SupportMapFragment {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
 
-        new FetchItemsTask().execute();
+        if (!mItemLab.hasGalleryItems()) {
+            mItemLab.refreshItems(this);
+        }
 
         getMapAsync(googleMap -> {
             mMap = googleMap;
@@ -36,31 +40,24 @@ public class PhotoMapFragment extends SupportMapFragment {
         });
     }
 
-    private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItem>> {
-        @Override
-        protected List<GalleryItem> doInBackground(Void... params) {
-            return new FlickrFetchr().fetchItems();
-        }
-
-        @Override
-        protected void onPostExecute(List<GalleryItem> galleryItems) {
-            mItems = galleryItems;
-            Log.i(TAG, galleryItems.size() + " items have been retrieved");
-            updateUI();
-        }
+    @Override
+    public void onRefreshItems(List<GalleryItem> items) {
+        updateUI();
     }
 
     private void updateUI() {
-        if (mMap == null || mItems == null || mItems.isEmpty()) {return;}
+        if (mMap == null || !mItemLab.hasGalleryItems()) {return;}
 
         mMap.clear();
 
-        for (GalleryItem item : mItems) {
+        for (GalleryItem item : mItemLab.getGalleryItems()) {
             LatLng itemLatLng = new LatLng(item.getLat(), item.getLon());
             MarkerOptions options = new MarkerOptions()
                     .position(itemLatLng)
                     .title(item.getCaption());
-            mMap.addMarker(options);
+            mMap.setInfoWindowAdapter(new MarkerInfoWindow(getContext()));
+            Marker marker = mMap.addMarker(options);
+            marker.setTag(item);
         }
     }
 

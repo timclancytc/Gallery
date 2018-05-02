@@ -1,5 +1,7 @@
 package edu.vt.cs.cs5254.gallery;
 
+import android.graphics.drawable.Drawable;
+
 public class GalleryItem {
 
     private String mCaption;
@@ -7,6 +9,7 @@ public class GalleryItem {
     private String mUrl;
     private double mLat;
     private double mLon;
+    private Drawable mDrawable;
 
     public String getCaption() {
         return mCaption;
@@ -46,5 +49,22 @@ public class GalleryItem {
 
     public void setLon(double lon) {
         mLon = lon;
+    }
+
+    public boolean hasDrawable() {
+        return !(mDrawable == null);
+    }
+
+    public Drawable getDrawable() {
+        return mDrawable;
+    }
+
+    public void setDrawable(Drawable drawable) {
+        mDrawable = drawable;
+    }
+
+    @Override
+    public String toString() {
+        return mCaption;
     }
 }
