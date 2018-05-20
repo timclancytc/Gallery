@@ -20,10 +20,11 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GalleryFragment extends Fragment {
+public class GalleryFragment extends Fragment
+        implements GalleryItemLab.OnRefreshItemsListener {
 
+    private GalleryItemLab mItemLab = GalleryItemLab.get();
     private RecyclerView mPhotoRecyclerView;
-    private List<GalleryItem> mItems = new ArrayList<>();
 
     private ThumbnailDownloader<PhotoHolder> mThumbnailDownloader;
 
@@ -38,14 +39,17 @@ public class GalleryFragment extends Fragment {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
 
-        new FetchItemsTask().execute();
 
+        if (!mItemLab.hasGalleryItems()) {
+            mItemLab.refreshItems(this);
+        }
         Handler responseHandler = new Handler();
         mThumbnailDownloader = new ThumbnailDownloader<>(responseHandler);
         mThumbnailDownloader.setThumbnailDownloadListener(
                 (photoHolder, bitmap) -> {
                     Drawable drawable = new BitmapDrawable(getResources(), bitmap);
                     photoHolder.bindDrawable(drawable);
+                    photoHolder.getGalleryItem().setDrawable(drawable);
                 }
         );
         mThumbnailDownloader.start();
@@ -74,12 +78,26 @@ public class GalleryFragment extends Fragment {
 
     private void setupAdapter() {
         if (isAdded()) {
-            mPhotoRecyclerView.setAdapter(new PhotoAdapter(mItems));
+            mPhotoRecyclerView.setAdapter(new PhotoAdapter(mItemLab.getGalleryItems()));
         }
+    }
+
+    @Override
+    public void onRefreshItems(List<GalleryItem> items) {
+        setupAdapter();
     }
 
     private class PhotoHolder extends RecyclerView.ViewHolder {
         private ImageView mItemImageView;
+        private GalleryItem mGalleryItem;
+
+        public GalleryItem getGalleryItem() {
+            return mGalleryItem;
+        }
+
+        public void setGalleryItem(GalleryItem galleryItem) {
+            mGalleryItem = galleryItem;
+        }
 
         public PhotoHolder(View itemView) {
             super(itemView);
@@ -110,9 +128,13 @@ public class GalleryFragment extends Fragment {
         @Override
         public void onBindViewHolder(@NonNull PhotoHolder holder, int position) {
             GalleryItem galleryItem = mGalleryItems.get(position);
-            Drawable placeholder = getResources().getDrawable(R.drawable.ic_photo);
-            holder.bindDrawable(placeholder);
-
+            holder.setGalleryItem(galleryItem);
+            if (galleryItem.hasDrawable()) {
+                holder.bindDrawable(galleryItem.getDrawable());
+            } else {
+                Drawable placeholder = getResources().getDrawable(R.drawable.ic_photo);
+                holder.bindDrawable(placeholder);
+            }
             mThumbnailDownloader.queueThumbnail(holder, galleryItem.getUrl());
         }
 
@@ -122,16 +144,4 @@ public class GalleryFragment extends Fragment {
         }
     }
 
-    private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItem>> {
-        @Override
-        protected List<GalleryItem> doInBackground(Void... params) {
-            return new FlickrFetchr().fetchItems();
-        }
-
-        @Override
-        protected void onPostExecute(List<GalleryItem> galleryItems) {
-            mItems = galleryItems;
-            setupAdapter();
-        }
-    }
 }
